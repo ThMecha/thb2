@@ -14,8 +14,6 @@ class STTScreen2 extends StatelessWidget {
   }
 }
 
-
-
 class SpeechToTextExample extends StatefulWidget {
   @override
   _SpeechToTextExampleState createState() => _SpeechToTextExampleState();
@@ -25,11 +23,18 @@ class _SpeechToTextExampleState extends State<SpeechToTextExample> {
   late stt.SpeechToText _speech;
   bool _isListening = false;
   String _text = "Press the button and start speaking";
+  String _currentLocaleId = 'th-TH'; // Default to Thai
 
   @override
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
+  }
+
+  void _toggleLanguage() {
+    setState(() {
+      _currentLocaleId = _currentLocaleId == 'th-TH' ? 'en-US' : 'th-TH';
+    });
   }
 
   void _listen() async {
@@ -40,9 +45,13 @@ class _SpeechToTextExampleState extends State<SpeechToTextExample> {
       );
       if (available) {
         setState(() => _isListening = true);
-        _speech.listen(onResult: (val) => setState(() {
-              _text = val.recognizedWords;
-            }));
+        _speech.listen(
+          onResult:
+              (val) => setState(() {
+                _text = val.recognizedWords;
+              }),
+          localeId: _currentLocaleId,
+        );
       }
     } else {
       setState(() => _isListening = false);
@@ -53,10 +62,31 @@ class _SpeechToTextExampleState extends State<SpeechToTextExample> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Speech to Text Example')),
+      appBar: AppBar(
+        title: Text('Speech to Text Example'),
+        actions: [
+          IconButton(
+            icon: Text(_currentLocaleId == 'th-TH' ? '🇹🇭' : '🇺🇸'),
+            onPressed: _toggleLanguage,
+          ),
+        ],
+      ),
       body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(_text),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              _text,
+              style: TextStyle(fontSize: 18),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Text(
+            'Current Language: ${_currentLocaleId == 'th-TH' ? 'Thai' : 'English'}',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 20),
           FloatingActionButton(
             onPressed: _listen,
             child: Icon(_isListening ? Icons.mic : Icons.mic_none),
