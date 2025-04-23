@@ -9,6 +9,7 @@ class SpeechToTextExample extends StatefulWidget {
 }
 
 class SpeechToTextExampleState extends State<SpeechToTextExample> {
+  final ScrollController _scrollController = ScrollController();
   late stt.SpeechToText _speech;
   bool _isListening = false;
   bool _isInitialized = false;
@@ -25,6 +26,7 @@ class SpeechToTextExampleState extends State<SpeechToTextExample> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _speech.stop();
     super.dispose();
   }
@@ -50,6 +52,7 @@ class SpeechToTextExampleState extends State<SpeechToTextExample> {
     setState(() {
       _isListening = status == 'listening';
       _logs.add('Status: $status');
+      _scrollToBottom();
     });
   }
 
@@ -57,6 +60,7 @@ class SpeechToTextExampleState extends State<SpeechToTextExample> {
     setState(() {
       _isListening = false;
       _logs.add('Error: ${val.errorMsg}');
+      _scrollToBottom();
     });
     if (val.errorMsg == 'error_speech_timeout') {
       _logs.add('Note: Android has a short timeout for pauses in speech');
@@ -69,10 +73,11 @@ class SpeechToTextExampleState extends State<SpeechToTextExample> {
     });
   }
 
-  void _listen() async {
+  void _listen({stt.ListenMode listenMode = stt.ListenMode.dictation}) async {
+    _logs.add('_listen method called with mode: $listenMode');
     if (!_isListening) {
       if (_isInitialized) {
-        _startListening();
+        _startListening(listenMode: listenMode);
       } else {
         setState(() => _isListening = false);
         _logs.add('Speech recognition not initialized');
@@ -84,9 +89,15 @@ class SpeechToTextExampleState extends State<SpeechToTextExample> {
     }
   }
 
-  void _startListening() {
+  void _startListening({stt.ListenMode listenMode = stt.ListenMode.dictation}) {
+    _logs.add('_startListening method called with mode: $listenMode');
     setState(() => _isListening = true);
-    _logs.add('Starting dictation with locale: $_currentLocaleId');
+    _logs.add('');
+    _logs.add('--');
+    _logs.insert(
+      0,
+      'Starting ${listenMode.toString()} with locale: $_currentLocaleId',
+    );
     _speech.listen(
       onResult:
           (val) => setState(() {
@@ -95,18 +106,32 @@ class SpeechToTextExampleState extends State<SpeechToTextExample> {
             } else {
               _logs.add('Partial: ${val.recognizedWords}...');
             }
-            _logs.add(
+            _logs.insert(
+              0,
               'Dictation: ${val.recognizedWords} (Final: ${val.finalResult})',
             );
+            _scrollToBottom();
           }),
       localeId: _currentLocaleId,
       pauseFor: Duration(milliseconds: 50000),
       listenOptions: stt.SpeechListenOptions(
         cancelOnError: false,
         partialResults: true,
-        listenMode: stt.ListenMode.dictation,
+        listenMode: listenMode,
       ),
     );
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   @override
@@ -146,6 +171,29 @@ class SpeechToTextExampleState extends State<SpeechToTextExample> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Column(
+                children: [
+                  ElevatedButton(
+                    onPressed:
+                        () => _listen(listenMode: stt.ListenMode.dictation),
+                    child: Text('Dictate Text'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _listen(listenMode: stt.ListenMode.search),
+                    child: Text('Search Query'),
+                  ),
+                  ElevatedButton(
+                    onPressed:
+                        () => _listen(listenMode: stt.ListenMode.confirmation),
+                    child: Text('Confirm (Yes/No)'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
               FloatingActionButton(
                 heroTag: 'mic_button', // Add unique hero tag
                 onPressed: _listen,
@@ -168,6 +216,7 @@ class SpeechToTextExampleState extends State<SpeechToTextExample> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: ListView.builder(
+                controller: _scrollController,
                 itemCount: _logs.length,
                 itemBuilder: (context, index) {
                   return Text(_logs[index], style: TextStyle(fontSize: 12));
