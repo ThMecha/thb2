@@ -2,18 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-class STTScreen2 extends StatelessWidget {
-  const STTScreen2({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Speech to Text')),
-      body: const Center(child: Text('Speech to Text Screen')),
-    );
-  }
-}
-
 class SpeechToTextExample extends StatefulWidget {
   @override
   _SpeechToTextExampleState createState() => _SpeechToTextExampleState();
@@ -24,6 +12,8 @@ class _SpeechToTextExampleState extends State<SpeechToTextExample> {
   bool _isListening = false;
   String _text = "Press the button and start speaking";
   String _currentLocaleId = 'th-TH'; // Default to Thai
+  double _pauseDuration = 3.0; // Add this line for pause duration in seconds
+  List<String> _logs = [];
 
   @override
   void initState() {
@@ -40,17 +30,25 @@ class _SpeechToTextExampleState extends State<SpeechToTextExample> {
   void _listen() async {
     if (!_isListening) {
       bool available = await _speech.initialize(
-        onStatus: (val) => print('onStatus: $val'),
-        onError: (val) => print('onError: $val'),
+        onStatus: (status) {
+          setState(() {
+            _isListening = status == 'listening';
+            _logs.add('Status: $status');
+          });
+          print('onStatus: $status');
+        },
+        onError: (val) => setState(() {
+          _logs.add('Error: ${val.errorMsg}');
+        }),
       );
       if (available) {
         setState(() => _isListening = true);
         _speech.listen(
-          onResult:
-              (val) => setState(() {
-                _text = val.recognizedWords;
-              }),
+          onResult: (val) => setState(() {
+            _text = val.recognizedWords;
+          }),
           localeId: _currentLocaleId,
+          listenFor: Duration(seconds: _pauseDuration.round()),
         );
       }
     } else {
@@ -87,9 +85,45 @@ class _SpeechToTextExampleState extends State<SpeechToTextExample> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 20),
+          Text(
+            'Pause Duration: ${_pauseDuration.round()} seconds',
+            style: TextStyle(fontSize: 16),
+          ),
+          Slider(
+            value: _pauseDuration,
+            min: 1.0,
+            max: 60.0,
+            divisions: 59,
+            label: _pauseDuration.round().toString(),
+            onChanged: (double value) {
+              setState(() {
+                _pauseDuration = value;
+              });
+            },
+          ),
+          SizedBox(height: 20),
           FloatingActionButton(
             onPressed: _listen,
             child: Icon(_isListening ? Icons.mic : Icons.mic_none),
+          ),
+          Expanded(
+            child: Container(
+              margin: EdgeInsets.all(16),
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ListView.builder(
+                itemCount: _logs.length,
+                itemBuilder: (context, index) {
+                  return Text(
+                    _logs[index],
+                    style: TextStyle(fontSize: 12),
+                  );
+                },
+              ),
+            ),
           ),
         ],
       ),

@@ -1,3 +1,7 @@
+buildscript {
+    extra["kotlin_version"] = "1.9.10"
+}
+
 allprojects {
     repositories {
         google()
