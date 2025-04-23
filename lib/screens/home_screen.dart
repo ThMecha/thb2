@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'stt_screen.dart';
 import 'tts_screen.dart';
+import 'stt_screen_with_google.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -21,6 +22,18 @@ class HomeScreen extends StatelessWidget {
                 );
               },
               child: const Text('Speech to Text'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => GoogleSpeechExample(),
+                  ),
+                );
+              },
+              child: const Text('Google Speech Example'),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
