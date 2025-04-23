@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/screens/stt_screen2.dart';
 
 class STTScreen extends StatelessWidget {
-  const STTScreen({Key? key}) : super(key: key);
+  const STTScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

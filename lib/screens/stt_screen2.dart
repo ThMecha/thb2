@@ -3,17 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class SpeechToTextExample extends StatefulWidget {
+  const SpeechToTextExample({super.key});
+
   @override
-  _SpeechToTextExampleState createState() => _SpeechToTextExampleState();
+  SpeechToTextExampleState createState() => SpeechToTextExampleState();
 }
 
-class _SpeechToTextExampleState extends State<SpeechToTextExample> {
+class SpeechToTextExampleState extends State<SpeechToTextExample> {
   late stt.SpeechToText _speech;
   bool _isListening = false;
   String _text = "Press the button and start speaking";
   String _currentLocaleId = 'th-TH'; // Default to Thai
   double _pauseDuration = 3.0; // Add this line for pause duration in seconds
-  List<String> _logs = [];
+  final List<String> _logs = [];
 
   @override
   void initState() {
@@ -27,6 +29,36 @@ class _SpeechToTextExampleState extends State<SpeechToTextExample> {
     });
   }
 
+  // void _listen() async {
+  //   if (!_isListening) {
+  //     bool available = await _speech.initialize(
+  //       onStatus: (status) {
+  //         setState(() {
+  //           _isListening = status == 'listening';
+  //           _logs.add('Status: $status');
+  //         });
+  //         print('onStatus: $status');
+  //       },
+  //       onError: (val) => setState(() {
+  //         _logs.add('Error: ${val.errorMsg}');
+  //       }),
+  //     );
+  //     if (available) {
+  //       setState(() => _isListening = true);
+  //       _speech.listen(
+  //         onResult: (val) => setState(() {
+  //           _text = val.recognizedWords;
+  //         }),
+  //         localeId: _currentLocaleId,
+  //         listenFor: Duration(seconds: _pauseDuration.round()),
+  //       );
+  //     }
+  //   } else {
+  //     setState(() => _isListening = false);
+  //     _speech.stop();
+  //   }
+  // }
+
   void _listen() async {
     if (!_isListening) {
       bool available = await _speech.initialize(
@@ -36,25 +68,56 @@ class _SpeechToTextExampleState extends State<SpeechToTextExample> {
             _logs.add('Status: $status');
           });
           print('onStatus: $status');
+          // Auto-restart listening when the session ends naturally
+          if (status == 'done' || status == 'notListening') {
+            if (_isListening) {
+              // Only restart if the user hasn't manually stopped
+              _startListening();
+            }
+          }
         },
-        onError: (val) => setState(() {
-          _logs.add('Error: ${val.errorMsg}');
-        }),
+        onError: (val) {
+          setState(() {
+            _isListening = false;
+            _logs.add('Error: ${val.errorMsg}, Details: ${val.toString()}');
+          });
+          print('Error: ${val.errorMsg}, Details: ${val.toString()}');
+          if (val.errorMsg == 'error_no_match') {
+            print('No match detected. Please speak clearly or check locale.');
+          }
+          // Optionally restart listening on error
+          if (_isListening) {
+            _startListening();
+          }
+        },
       );
       if (available) {
-        setState(() => _isListening = true);
-        _speech.listen(
-          onResult: (val) => setState(() {
-            _text = val.recognizedWords;
-          }),
-          localeId: _currentLocaleId,
-          listenFor: Duration(seconds: _pauseDuration.round()),
-        );
+        _startListening();
+      } else {
+        setState(() => _isListening = false);
+        print('Speech recognition not available');
       }
     } else {
       setState(() => _isListening = false);
       _speech.stop();
+      print('Stopped listening');
     }
+  }
+
+  // Helper method to start or restart listening
+  void _startListening() {
+    setState(() => _isListening = true);
+    print('Starting listening with locale: $_currentLocaleId');
+    _speech.listen(
+      onResult:
+          (val) => setState(() {
+            _text = val.recognizedWords;
+            print('Recognized: ${val.recognizedWords}');
+          }),
+      localeId: _currentLocaleId,
+      listenFor: Duration(minutes: 5), // Set a large duration (e.g., 5 minutes)
+      pauseFor: Duration(seconds: 5), // Optional: Pause duration for silence
+    );
   }
 
   @override
@@ -117,10 +180,7 @@ class _SpeechToTextExampleState extends State<SpeechToTextExample> {
               child: ListView.builder(
                 itemCount: _logs.length,
                 itemBuilder: (context, index) {
-                  return Text(
-                    _logs[index],
-                    style: TextStyle(fontSize: 12),
-                  );
+                  return Text(_logs[index], style: TextStyle(fontSize: 12));
                 },
               ),
             ),
