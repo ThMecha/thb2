@@ -104,11 +104,11 @@ class SpeechToTextExampleState extends State<SpeechToTextExample> {
             if (val.finalResult) {
               _text = '$_text${_text.isEmpty ? '' : ' '}${val.recognizedWords}';
             } else {
-              _logs.add('Partial: ${val.recognizedWords}...');
+              _logs.add('Partial: ${val.recognizedWords}... (Confidence: ${val.confidence})');
             }
             _logs.insert(
               0,
-              'Dictation: ${val.recognizedWords} (Final: ${val.finalResult})',
+              'Dictation: ${val.recognizedWords} (Final: ${val.finalResult}, Confidence: ${val.confidence})',
             );
             _scrollToBottom();
           }),
