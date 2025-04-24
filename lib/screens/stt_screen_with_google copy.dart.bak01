@@ -1,0 +1,128 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_speech/google_speech.dart';
+import 'package:mic_stream/mic_stream.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+
+class GoogleSpeechExample extends StatefulWidget {
+  @override
+  _GoogleSpeechExampleState createState() => _GoogleSpeechExampleState();
+}
+
+class _GoogleSpeechExampleState extends State<GoogleSpeechExample> {
+  String transcription = '';
+  bool isRecording = false;
+  Stream<Uint8List>? audioStream;
+  StreamSubscription? subscription;
+  late SpeechToText speechToText;
+  bool isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    rootBundle.loadString('assets/service_account.json').then((jsonString) {
+      final serviceAccount = ServiceAccount.fromString(jsonString);
+      speechToText = SpeechToText.viaServiceAccount(serviceAccount);
+      setState(() => isInitialized = true);
+    });
+  }
+
+  // Future<void> startRecording() async {
+  //   if (!isInitialized) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Service account not loaded yet')),
+  //     );
+  //     return;
+  //   }
+  //   if (await Permission.microphone.request().isGranted) {
+  //     setState(() {
+  //       isRecording = true;
+  //       transcription = '';
+  //     });
+  //     audioStream = await MicStream.microphone(
+  //       sampleRate: 16000,
+  //       audioFormat: AudioFormat.ENCODING_PCM_16BIT,
+  //     );
+  //     final config = RecognitionConfig(
+  //       encoding: AudioEncoding.LINEAR16,
+  //       model: 'default',
+  //       enableAutomaticPunctuation: true,
+  //       sampleRateHertz: 16000,
+  //       languageCode: 'en-US',
+  //     );
+  //     final streamingConfig = StreamingRecognitionConfig(
+  //       config: config,
+  //       interimResults: true,
+  //     );
+  //     final responseStream = speechToText.streamingRecognize(streamingConfig, audioStream!);
+  //     subscription = responseStream.listen((response) {
+  //       if (response.results.isNotEmpty) {
+  //         setState(() => transcription += response.results.first.alternatives.first.transcript + ' ');
+  //       }
+  //     });
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Microphone permission is required')),
+  //     );
+  //   }
+  // }
+
+  Future<void> startRecording() async {
+  if (!isInitialized) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Service account not loaded yet')),
+    );
+    return;
+  }
+  if (await Permission.microphone.request().isGranted) {
+    setState(() {
+      isRecording = true;
+      transcription = '';
+    });
+    audioStream = await MicStream.microphone(
+      sampleRate: 16000,
+      audioFormat: AudioFormat.ENCODING_PCM_16BIT,
+    );
+    final config = RecognitionConfig(
+      encoding: AudioEncoding.LINEAR16,
+      model: RecognitionModel.basic,  // Changed from 'default' to RecognitionModel.basic
+      enableAutomaticPunctuation: true,
+      sampleRateHertz: 16000,
+      languageCode: 'en-US',
+    );
+    final streamingConfig = StreamingRecognitionConfig(
+      config: config,
+      interimResults: true,
+    );
+    final responseStream = speechToText.streamingRecognize(streamingConfig, audioStream!);
+    subscription = responseStream.listen((response) {
+      if (response.results.isNotEmpty) {
+        setState(() => transcription += response.results.first.alternatives.first.transcript + ' ');
+      }
+    });
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Microphone permission is required')),
+    );
+  }
+}
+
+  void stopRecording() {
+    subscription?.cancel();
+    setState(() => isRecording = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Voice Typing Demo')),
+      body: Padding(padding: EdgeInsets.all(16.0), child: Text(transcription)),
+      floatingActionButton: FloatingActionButton(
+        onPressed: isRecording ? stopRecording : startRecording,
+        child: Icon(isRecording ? Icons.stop : Icons.mic),
+      ),
+    );
+  }
+}

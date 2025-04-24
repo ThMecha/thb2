@@ -29,7 +29,7 @@ class HomeScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => GoogleSpeechExample(),
+                    builder: (context) => const GoogleSpeechV2Screen(), // Use the new class name
                   ),
                 );
               },
